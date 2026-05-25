@@ -79,6 +79,17 @@ Before producing work, the agent should fully understand the referenced skill do
 
 - **`internal-comms`** – A set of resources to help me write all kinds of internal communications, using the formats that my company likes to use. Claude should use this skill whenever asked to write some sort of internal communications (status reports, leadership updates, 3P updates, company newsletters, FAQs, incident reports, project updates, etc.).
 
+## Shared Git Workflow
+
+- work from a short-lived branch created from `main`
+- do not commit directly to `main`
+- use branch names prefixed with `feat/`, `fix/`, `docs/`, `chore/`, `refactor/`, or `test/`
+- keep one logical change per branch and pull request
+- open a pull request before merging to `main`, including for solo work
+- prefer squash merge unless multiple commits carry durable review value
+- delete the merged or closed feature branch after the work is finished; never delete `main`
+- use tags in `vX.Y.Z` format for releases and do not move published tags
+
 ## Skills meta
 
 - **`mcp-builder`** – Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-designed tools. Use when building MCP servers to integrate external APIs or services, whether in Python (FastMCP) or Node/TypeScript (MCP SDK).

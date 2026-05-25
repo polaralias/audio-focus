@@ -47,6 +47,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.polaralias.audiofocus.core.logic.MediaControlCapabilities
+import com.polaralias.audiofocus.core.logic.MediaControlCapabilitiesResolver
 import com.polaralias.audiofocus.core.logic.MediaControlClient
 import com.polaralias.audiofocus.core.model.AppSettings
 import com.polaralias.audiofocus.core.model.MediaAction
@@ -57,6 +59,7 @@ import com.polaralias.audiofocus.service.monitor.MediaSessionMonitor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import java.util.Locale
 
 @Composable
 fun OverlayScreen(
@@ -68,6 +71,7 @@ fun OverlayScreen(
     val targetApp by targetAppFlow.collectAsState()
     val appSettings by appSettingsFlow.collectAsState(initial = AppSettings())
     val controllers by mediaSessionMonitor.controllers.collectAsState(initial = emptyList())
+    val capabilitiesResolver = remember { MediaControlCapabilitiesResolver() }
 
     val targetTheme = when (targetApp) {
         TargetApp.YOUTUBE -> appSettings.youtubeTheme
@@ -154,6 +158,7 @@ fun OverlayScreen(
             if (controller != null) {
                 MediaControls(
                     controller = controller,
+                    capabilities = capabilitiesResolver.resolve(controller.playbackState?.actions ?: 0L),
                     onAction = { action -> mediaControlClient.sendAction(targetApp!!, action) }
                 )
             } else {
@@ -170,6 +175,7 @@ fun OverlayScreen(
 @Composable
 fun MediaControls(
     controller: MediaController,
+    capabilities: MediaControlCapabilities,
     onAction: (MediaAction) -> Unit
 ) {
     val playbackState = controller.playbackState
@@ -221,16 +227,20 @@ fun MediaControls(
             Slider(
                 value = (if (isDragging) dragPosition else currentPosition).toFloat(),
                 onValueChange = {
-                    isDragging = true
-                    dragPosition = it.toLong()
+                    if (capabilities.canSeek) {
+                        isDragging = true
+                        dragPosition = it.toLong()
+                    }
                 },
                 onValueChangeFinished = {
-                    onAction(MediaAction.Seek(dragPosition))
-                    // Optimistically update current position to avoid jump back
-                    currentPosition = dragPosition
-                    isDragging = false
+                    if (capabilities.canSeek) {
+                        onAction(MediaAction.Seek(dragPosition))
+                        currentPosition = dragPosition
+                        isDragging = false
+                    }
                 },
                 valueRange = 0f..duration.toFloat(),
+                enabled = capabilities.canSeek,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -251,7 +261,10 @@ fun MediaControls(
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
-            IconButton(onClick = { onAction(MediaAction.SkipBackward) }) {
+            IconButton(
+                onClick = { onAction(MediaAction.SkipBackward) },
+                enabled = capabilities.canSkipBackward
+            ) {
                 Icon(
                     imageVector = Icons.Default.FastRewind,
                     contentDescription = "Rewind 10s",
@@ -262,9 +275,12 @@ fun MediaControls(
 
             Spacer(modifier = Modifier.width(32.dp))
 
-            IconButton(onClick = {
-                if (isPlaying) onAction(MediaAction.Pause) else onAction(MediaAction.Play)
-            }) {
+            IconButton(
+                onClick = {
+                    if (isPlaying) onAction(MediaAction.Pause) else onAction(MediaAction.Play)
+                },
+                enabled = if (isPlaying) capabilities.canPause else capabilities.canPlay
+            ) {
                 Icon(
                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     contentDescription = if (isPlaying) "Pause" else "Play",
@@ -275,7 +291,10 @@ fun MediaControls(
 
             Spacer(modifier = Modifier.width(32.dp))
 
-            IconButton(onClick = { onAction(MediaAction.SkipForward) }) {
+            IconButton(
+                onClick = { onAction(MediaAction.SkipForward) },
+                enabled = capabilities.canSkipForward
+            ) {
                 Icon(
                     imageVector = Icons.Default.FastForward,
                     contentDescription = "Forward 10s",
@@ -302,5 +321,5 @@ private fun formatTime(ms: Long): String {
     val totalSeconds = ms / 1000
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
-    return String.format("%02d:%02d", minutes, seconds)
+    return String.format(Locale.US, "%02d:%02d", minutes, seconds)
 }

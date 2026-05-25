@@ -27,6 +27,7 @@ class SettingsRepositoryImpl @Inject constructor(
 
     private object PreferencesKeys {
         val MONITORING_ENABLED = booleanPreferencesKey("monitoring_enabled")
+        val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
 
         // Legacy keys mapped to general/YouTube theme
         val BLUR_ENABLED = booleanPreferencesKey("blur_enabled")
@@ -69,6 +70,7 @@ class SettingsRepositoryImpl @Inject constructor(
 
             AppSettings(
                 isMonitoringEnabled = monitoringEnabled,
+                hasCompletedOnboarding = preferences[PreferencesKeys.ONBOARDING_COMPLETED] ?: false,
                 youtubeTheme = ytTheme,
                 youtubeMusicTheme = ytmTheme
             )
@@ -88,6 +90,12 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setMonitoringEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.MONITORING_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun setOnboardingCompleted(completed: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.ONBOARDING_COMPLETED] = completed
         }
     }
 

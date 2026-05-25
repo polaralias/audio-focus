@@ -70,6 +70,7 @@ data class ThemeConfig(
 
 data class AppSettings(
     val isMonitoringEnabled: Boolean = true,
+    val hasCompletedOnboarding: Boolean = false,
     val youtubeTheme: ThemeConfig = ThemeConfig(),
     val youtubeMusicTheme: ThemeConfig = ThemeConfig()
 )

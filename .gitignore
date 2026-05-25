@@ -22,3 +22,17 @@ local.properties
 google-services.json
 .android_sdk/
 app/build/
+
+# Local emulator verification artifacts
+/api35_*.png
+/api35_*.xml
+/audiofocus_api35_*.png
+/audiofocus_api35_*.xml
+/emulator_*.png
+/youtube_*.png
+/youtube_*.xml
+/youtube_*.txt
+/ytmusic_*.png
+/ytmusic_*.xml
+/ytmusic_*.txt
+/windows_overlay_check.txt

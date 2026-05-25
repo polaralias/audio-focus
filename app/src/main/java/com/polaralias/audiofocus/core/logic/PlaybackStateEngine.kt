@@ -10,6 +10,7 @@ import com.polaralias.audiofocus.service.monitor.AccessibilityMonitor
 import com.polaralias.audiofocus.service.monitor.AccessibilityState
 import com.polaralias.audiofocus.service.monitor.ForegroundAppDetector
 import com.polaralias.audiofocus.service.monitor.MediaSessionMonitor
+import com.polaralias.audiofocus.service.monitor.NotificationMonitor
 import android.util.Log
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
@@ -23,15 +24,17 @@ import javax.inject.Singleton
 class PlaybackStateEngine @Inject constructor(
     accessibilityMonitor: AccessibilityMonitor,
     mediaSessionMonitor: MediaSessionMonitor,
+    notificationMonitor: NotificationMonitor,
     foregroundAppDetector: ForegroundAppDetector
 ) {
     @OptIn(FlowPreview::class)
     val overlayDecision: Flow<OverlayDecision> = combine(
         accessibilityMonitor.states,
         mediaSessionMonitor.observe(),
+        notificationMonitor.activeMediaNotifications,
         foregroundAppDetector.foregroundPackage
-    ) { accessibilityStates, mediaSessionStates, foregroundPackage ->
-        determineOverlayDecision(accessibilityStates, mediaSessionStates, foregroundPackage)
+    ) { accessibilityStates, mediaSessionStates, activeNotifications, foregroundPackage ->
+        determineOverlayDecision(accessibilityStates, mediaSessionStates, activeNotifications, foregroundPackage)
     }
     .debounce(200)
     .distinctUntilChanged()
@@ -39,10 +42,11 @@ class PlaybackStateEngine @Inject constructor(
     private fun determineOverlayDecision(
         accessibilityStates: Map<TargetApp, AccessibilityState>,
         mediaSessionStates: Map<TargetApp, PlaybackStateSimplified>,
+        activeNotifications: Set<TargetApp>,
         foregroundPackage: String?
     ): OverlayDecision {
         for (app in TargetApp.entries) {
-            val decision = evaluateApp(app, accessibilityStates, mediaSessionStates, foregroundPackage)
+            val decision = evaluateApp(app, accessibilityStates, mediaSessionStates, activeNotifications, foregroundPackage)
             if (decision.shouldOverlay) {
                 return decision
             }
@@ -54,10 +58,13 @@ class PlaybackStateEngine @Inject constructor(
         app: TargetApp,
         accessibilityStates: Map<TargetApp, AccessibilityState>,
         mediaSessionStates: Map<TargetApp, PlaybackStateSimplified>,
+        activeNotifications: Set<TargetApp>,
         foregroundPackage: String?
     ): OverlayDecision {
         val accState = accessibilityStates[app]
         val playbackState = mediaSessionStates[app] ?: PlaybackStateSimplified.STOPPED
+        val hasActiveNotification = activeNotifications.contains(app)
+        val isConfirmedForeground = foregroundPackage == app.packageName
 
         var windowState = accState?.windowState ?: WindowState.NOT_VISIBLE
         val playbackType = accState?.playbackType ?: PlaybackType.NONE
@@ -72,18 +79,25 @@ class PlaybackStateEngine @Inject constructor(
         }
 
         return when (app) {
-            TargetApp.YOUTUBE -> evaluateYouTube(windowState, playbackState, playbackType)
-            TargetApp.YOUTUBE_MUSIC -> evaluateYouTubeMusic(windowState, playbackState, playbackType)
+            TargetApp.YOUTUBE -> evaluateYouTube(windowState, playbackState, playbackType, hasActiveNotification, isConfirmedForeground)
+            TargetApp.YOUTUBE_MUSIC -> evaluateYouTubeMusic(windowState, playbackState, playbackType, hasActiveNotification, isConfirmedForeground)
         }
     }
 
     private fun evaluateYouTube(
         windowState: WindowState,
         playbackState: PlaybackStateSimplified,
-        playbackType: PlaybackType
+        playbackType: PlaybackType,
+        hasActiveNotification: Boolean,
+        isConfirmedForeground: Boolean
     ): OverlayDecision {
         if (playbackState == PlaybackStateSimplified.PAUSED || playbackState == PlaybackStateSimplified.STOPPED) {
             Log.d("PlaybackStateEngine", "YouTube: No overlay (PlaybackState: $playbackState)")
+            return noOverlay()
+        }
+
+        if (!hasActiveNotification && !isConfirmedForeground) {
+            Log.d("PlaybackStateEngine", "YouTube: No overlay (No active media notification)")
             return noOverlay()
         }
 
@@ -106,11 +120,18 @@ class PlaybackStateEngine @Inject constructor(
     private fun evaluateYouTubeMusic(
         windowState: WindowState,
         playbackState: PlaybackStateSimplified,
-        playbackType: PlaybackType
+        playbackType: PlaybackType,
+        hasActiveNotification: Boolean,
+        isConfirmedForeground: Boolean
     ): OverlayDecision {
         if (playbackState != PlaybackStateSimplified.PLAYING) {
              Log.d("PlaybackStateEngine", "YouTube Music: No overlay (PlaybackState: $playbackState)")
              return noOverlay()
+        }
+
+        if (!hasActiveNotification && !isConfirmedForeground) {
+            Log.d("PlaybackStateEngine", "YouTube Music: No overlay (No active media notification)")
+            return noOverlay()
         }
 
         if (playbackType == PlaybackType.VISIBLE_VIDEO) {

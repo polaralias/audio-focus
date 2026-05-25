@@ -12,6 +12,7 @@ interface SettingsRepository {
     val appSettings: Flow<AppSettings>
 
     suspend fun setMonitoringEnabled(enabled: Boolean)
+    suspend fun setOnboardingCompleted(completed: Boolean)
 
     // Legacy support
     suspend fun setBlurEnabled(enabled: Boolean)

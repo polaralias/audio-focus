@@ -16,7 +16,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,12 +31,16 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModel
 import com.polaralias.audiofocus.domain.PermissionManager
+import com.polaralias.audiofocus.domain.settings.SettingsRepository
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
-    private val permissionManager: PermissionManager
+    private val permissionManager: PermissionManager,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     fun checkPermissions(
@@ -71,6 +74,13 @@ class OnboardingViewModel @Inject constructor(
     fun requestUsageStatsPermission(context: android.content.Context) {
         context.startActivity(permissionManager.getUsageStatsPermissionIntent())
     }
+
+    fun completeOnboarding(onCompleted: () -> Unit) {
+        viewModelScope.launch {
+            settingsRepository.setOnboardingCompleted(true)
+            onCompleted()
+        }
+    }
 }
 
 @Composable
@@ -95,7 +105,7 @@ fun OnboardingScreen(
                     onAllGranted = {
                         // Only auto-advance if we were in a permission step
                         if (currentStep != OnboardingStep.WELCOME) {
-                            onOnboardingComplete()
+                            viewModel.completeOnboarding(onOnboardingComplete)
                         }
                     }
                 )
@@ -125,7 +135,7 @@ fun OnboardingScreen(
                         onAccessibilityMissing = { currentStep = OnboardingStep.ACCESSIBILITY_PERMISSION },
                         onNotificationMissing = { currentStep = OnboardingStep.NOTIFICATION_PERMISSION },
                         onUsageStatsMissing = { currentStep = OnboardingStep.USAGE_STATS_PERMISSION },
-                        onAllGranted = { onOnboardingComplete() }
+                        onAllGranted = { viewModel.completeOnboarding(onOnboardingComplete) }
                      )
                 })
                 OnboardingStep.OVERLAY_PERMISSION -> PermissionStep(

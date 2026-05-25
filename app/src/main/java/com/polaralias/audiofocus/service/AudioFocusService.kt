@@ -144,17 +144,15 @@ class AudioFocusService : Service() {
     }
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                Constants.MONITOR_NOTIFICATION_CHANNEL_ID,
-                "AudioFocus Monitor",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Monitoring active media apps"
-            }
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            Constants.MONITOR_NOTIFICATION_CHANNEL_ID,
+            "AudioFocus Monitor",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "Monitoring active media apps"
         }
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.createNotificationChannel(channel)
     }
 
     private fun createNotification(): Notification {
@@ -177,12 +175,7 @@ class AudioFocusService : Service() {
         overlayManager.hide()
 
         if (stopService) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                stopForeground(STOP_FOREGROUND_REMOVE)
-            } else {
-                @Suppress("DEPRECATION")
-                stopForeground(true)
-            }
+            stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
     }

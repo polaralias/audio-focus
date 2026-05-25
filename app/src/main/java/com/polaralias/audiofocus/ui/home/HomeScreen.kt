@@ -71,11 +71,7 @@ class HomeViewModel @Inject constructor(
 
             if (enabled) {
                 val intent = Intent(context, AudioFocusService::class.java)
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    context.startForegroundService(intent)
-                } else {
-                    context.startService(intent)
-                }
+                context.startForegroundService(intent)
             } else {
                 val intent = Intent(context, AudioFocusService::class.java).apply {
                     action = AudioFocusService.ACTION_STOP_MONITORING

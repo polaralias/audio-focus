@@ -1,5 +1,12 @@
 # AudioFocus – Extended Android Technical Specification
 
+Status of this document:
+
+- This is a desired-state specification and architecture intent document.
+- `docs/final_product_contract.md` is the sharper canonical target contract for agent-led implementation toward the finished product state.
+- It is not the canonical source for current verified repository behaviour.
+- For current observed state and evidence, read `README.md`, `docs/codebase_map.md`, and `docs/verification_baseline.md` first.
+
 ## 1. Product overview
 
 **Product name:** AudioFocus
@@ -52,6 +59,17 @@ As Android does not expose a unified API to determine whether a media session co
 * **UsageStatsManager or ActivityManager** for fallback foreground app estimation when accessibility data becomes incomplete.
 
 Each signal must be incorporated into the overall decision engine so that missing or stale information does not lead to false overlays.
+
+Final target interpretation:
+
+- The finished product uses four active decision signals:
+  - accessibility state
+  - media session state
+  - notification-derived playback relevance
+  - foreground-app visibility
+- `PlaybackType.AUDIO_ONLY` must be emitted and consumed as a real runtime state.
+- `WindowState.FOREGROUND_MINIMISED` must be emitted and consumed as a real runtime state.
+- `WindowState.BACKGROUND` must be supported as a meaningful runtime conclusion when playback persists outside the active foreground experience.
 
 ### 2.3 Media controls
 

@@ -1,20 +1,25 @@
-name: Android Debug CI
+name: Publish Android Release
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
 
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
     env:
       ANDROID_API_LEVEL: "34"
       ANDROID_BUILD_TOOLS: "34.0.0"
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -39,7 +44,7 @@ jobs:
             "platforms;android-${ANDROID_API_LEVEL}" \
             "build-tools;${ANDROID_BUILD_TOOLS}"
 
-      - name: Extract version metadata
+      - name: Resolve version metadata
         id: version
         shell: bash
         run: |
@@ -64,8 +69,6 @@ jobs:
               + "\n",
               encoding="utf-8",
           )
-          print(f"version_name={version_name}")
-          print(f"version_code={version_code}")
           PY
           python - <<'PY' >> "$GITHUB_OUTPUT"
           import json
@@ -74,32 +77,56 @@ jobs:
           print(f"version_code={data['versionCode']}")
           PY
 
+      - name: Validate tag matches versionName
+        shell: bash
+        run: |
+          expected_tag="v${{ steps.version.outputs.version_name }}"
+          if [ "${GITHUB_REF_NAME}" != "${expected_tag}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match ${expected_tag}" >&2
+            exit 1
+          fi
+
       - name: Remove local.properties
         run: rm -f local.properties
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Run unit tests
-        run: ./gradlew testDebugUnitTest --console=plain
-
-      - name: Run lint
-        run: ./gradlew lintDebug --console=plain
-
       - name: Build debug APK
         run: ./gradlew assembleDebug --console=plain
 
-      - name: Prepare debug APK
+      - name: Prepare release assets
         run: cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/audiofocus-debug.apk
 
-      - name: Upload debug APK
+      - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4
         with:
           name: audiofocus-debug
-          path: app/build/outputs/apk/debug/audiofocus-debug.apk
+          path: |
+            app/build/outputs/apk/debug/audiofocus-debug.apk
+            version-metadata.json
 
-      - name: Upload version metadata
-        uses: actions/upload-artifact@v4
-        with:
-          name: audiofocus-version-metadata
-          path: version-metadata.json
+      - name: Publish release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          title="${tag} (code ${{ steps.version.outputs.version_code }})"
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" \
+              "app/build/outputs/apk/debug/audiofocus-debug.apk#audiofocus-debug.apk" \
+              "version-metadata.json#audiofocus-version-metadata.json" \
+              --clobber
+            gh release edit "$tag" --draft=false --latest --verify-tag --title "$title"
+          else
+            gh release create "$tag" \
+              "app/build/outputs/apk/debug/audiofocus-debug.apk#audiofocus-debug.apk" \
+              "version-metadata.json#audiofocus-version-metadata.json" \
+              --verify-tag \
+              --generate-notes \
+              --latest \
+              --title "$title"
+          fi

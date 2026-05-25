@@ -34,6 +34,10 @@ class AccessibilityMonitor @Inject constructor(
     private val displayMetrics = context.resources.displayMetrics
     private val screenHeight = displayMetrics.heightPixels
     private val screenWidth = displayMetrics.widthPixels
+    private val heuristics = AccessibilityHeuristics(
+        screenWidth = screenWidth,
+        screenHeight = screenHeight
+    )
 
     fun onEvent(event: AccessibilityEvent, rootNode: AccessibilityNodeInfo?) {
         val packageName = event.packageName?.toString() ?: return
@@ -114,25 +118,13 @@ class AccessibilityMonitor @Inject constructor(
             if (node != root) node.recycle()
         }
 
-        val playbackType = if (hasVideoSurface) PlaybackType.VISIBLE_VIDEO else PlaybackType.NONE
-
-        // Window State Determination
         val rect = Rect()
         root.getBoundsInScreen(rect)
-
-        // Simple heuristic for window state
-        // Fullscreen usually matches screen dimensions
-        val isFullscreen = rect.width() >= screenWidth && rect.height() >= screenHeight
-
-        val windowState = when {
-            isFullscreen -> WindowState.FOREGROUND_FULLSCREEN
-            // PiP is usually smaller and floating.
-            // How to distinguish PiP from Dialog?
-            // PiP usually has specific window type but AccessibilityNode doesn't show window type directly easily.
-            // Assuming any non-fullscreen visible window is PiP or Minimised for now.
-            rect.width() > 0 && rect.height() > 0 -> WindowState.PICTURE_IN_PICTURE
-            else -> WindowState.NOT_VISIBLE
-        }
+        val windowState = heuristics.determineWindowState(
+            width = rect.width(),
+            height = rect.height()
+        )
+        val playbackType = heuristics.determinePlaybackType(hasVideoSurface, windowState)
 
         return AccessibilityState(windowState, playbackType)
     }

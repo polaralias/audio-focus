@@ -18,6 +18,13 @@ import javax.inject.Singleton
 class PermissionManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    fun hasAllRequiredPermissions(): Boolean {
+        return hasOverlayPermission() &&
+            hasAccessibilityPermission() &&
+            hasNotificationListenerPermission() &&
+            hasUsageStatsPermission()
+    }
+
     fun hasOverlayPermission(): Boolean {
         return Settings.canDrawOverlays(context)
     }
