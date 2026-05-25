@@ -1,76 +1,72 @@
+<p align="center">
+  <img src="AudioFocus%20Banner.png" alt="AudioFocus banner" width="960" />
+</p>
+
 # AudioFocus
 
-AudioFocus is an Android app that hides distracting video in selected media apps behind a full-screen overlay while preserving audio playback and basic transport controls.
+AudioFocus is an Android app that hides distracting video in selected media apps behind a full-screen overlay while keeping the audio playing and basic playback controls available.
 
-## Status
+## What It Does
 
-Current repository truth:
+AudioFocus is designed for people who want to listen to long-form video content without the visual pull of the video itself. The app watches supported media sessions, detects when video playback starts, and places an overlay over the video surface so the audio can continue without the usual visual distraction.
 
-- Local automated verification passes on this machine.
-- Android emulator validation has been reproduced locally.
-- An older Play-backed emulator reproduces a YouTube `PLAYING` session and an AudioFocus overlay window.
+## Core Features
 
-Publication posture:
+- full-screen overlay for supported media apps
+- audio-first playback experience
+- basic transport controls while the overlay is active
+- onboarding for the permissions the app needs to operate
+- local-only behavior with no backend requirement
 
-- The repository is ready to publish as a documented, buildable project.
-- The current public claim is bounded to local automated verification and emulator-verified runtime behaviour.
+## How It Works
 
-## Reading Order
+AudioFocus combines:
 
-Read these files in order:
+- Android accessibility and notification-listener capabilities to observe supported playback state
+- overlay-window permissions so it can cover active video content
+- foreground-service behavior to keep the media monitoring path active when needed
 
-1. [`README.md`](README.md)
-2. [`docs/agent_harness.md`](docs/agent_harness.md)
-3. [`docs/release_readiness.md`](docs/release_readiness.md)
-4. [`docs/verification_baseline.md`](docs/verification_baseline.md)
-5. [`docs/codebase_map.md`](docs/codebase_map.md)
-6. [`docs/final_product_contract.md`](docs/final_product_contract.md)
-7. [`docs/technical_specification.md`](docs/technical_specification.md)
-8. [`docs/decisions/001-repository-truth-precedence.md`](docs/decisions/001-repository-truth-precedence.md)
-9. [`docs/decisions/002-current-runtime-contract.md`](docs/decisions/002-current-runtime-contract.md)
-10. [`docs/decisions/003-final-product-contract.md`](docs/decisions/003-final-product-contract.md)
-11. [`GLOSSARY.md`](GLOSSARY.md)
-12. [`AGENTS.md`](AGENTS.md)
+The app is intended to intervene only when configured media playback is detected. It does not upload viewing data or require a cloud account.
 
-## Canonical Docs
+## Build And Run
 
-These are the current source-of-truth surfaces:
+Prerequisites:
 
-- Repository operating contract: [`docs/agent_harness.md`](docs/agent_harness.md)
-- Release posture: [`docs/release_readiness.md`](docs/release_readiness.md)
-- Verification evidence: [`docs/verification_baseline.md`](docs/verification_baseline.md)
-- Implementation map: [`docs/codebase_map.md`](docs/codebase_map.md)
-- Final product target: [`docs/final_product_contract.md`](docs/final_product_contract.md)
-- Repository language: [`GLOSSARY.md`](GLOSSARY.md)
-- Durable interpretation decisions: `docs/decisions/`
+- Android Studio or the Android SDK command-line tools
+- JDK 17
+- an emulator or Android device
 
-Historical material lives under `docs/archive/` and should not be treated as the active contract.
+Build a debug APK:
 
-## Verified Baseline
+```bash
+./gradlew assembleDebug
+```
 
-The latest local verification pass confirms:
+Run unit tests:
 
-- `.\gradlew.bat testDebugUnitTest`
-- `.\gradlew.bat lintDebug`
-- `.\gradlew.bat assembleDebug`
-- `.\gradlew.bat help --warning-mode all`
+```bash
+./gradlew testDebugUnitTest
+```
 
-The latest emulator validation confirms:
+Run lint:
 
-- fresh-install launch into onboarding
-- permission completion through to the active home screen on a Play-backed AVD
-- reproduced YouTube playback detection
-- reproduced AudioFocus overlay-window activation during the YouTube path
+```bash
+./gradlew lintDebug
+```
 
-See [`docs/verification_baseline.md`](docs/verification_baseline.md) for the dated evidence and current limits.
+## Project Structure
 
-## Repository Layout
+- `app/` Android app source, resources, manifest, and tests
+- `docs/` technical documentation, verification notes, and decisions
+- `.github/workflows/` debug CI and release automation
+- `skills/` repository-local support skills
 
-- `app/` Android app code, resources, manifest, and tests
-- `docs/` current docs, decisions, verification evidence, and archive
-- `.github/workflows/` CI for debug build, unit tests, and lint
-- `skills/` repository-local agent skills
+## Documentation
 
-## Contribution Rule
+Start with:
 
-When behaviour or support claims change, update the canonical docs in the same slice and keep current-state evidence separate from desired-state specification.
+- [docs/final_product_contract.md](docs/final_product_contract.md)
+- [docs/technical_specification.md](docs/technical_specification.md)
+- [docs/verification_baseline.md](docs/verification_baseline.md)
+
+For repository workflow and agent-focused maintenance context, read [AGENTS.md](AGENTS.md).
